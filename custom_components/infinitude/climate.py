@@ -18,7 +18,13 @@ from homeassistant.const import (
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 
-import urllib.request, urllib.parse, json, datetime
+import sys
+import urllib.request, urllib.parse
+import json
+import datetime
+import logging
+
+_LOGGER = logging.getLogger(__name__)
 
 REQUIREMENTS = []
 
@@ -40,7 +46,7 @@ FAN_LIST = [FAN_MODE_AUTO, FAN_MODE_HIGH, FAN_MODE_MED, FAN_MODE_LOW]
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
-    vol.Required(CONF_PORT): cv.port,
+    vol.Optional(CONF_PORT, default=3000): cv.port,
 })
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -48,36 +54,29 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
 
-    # Get the system status, and create devices for the enabled zones
-    with urllib.request.urlopen("http://{}:{}/api/status.json".format(host, port)) as url:
-        status = json.loads(url.read().decode())
+    infinitude = Infinitude(host, port)
+    systemStatus = infinitude.getSystemStatus()
 
     devices = []
-    zones = status["zones"][0]["zone"]
-    for zone in zones:
-        if zone.get("enabled") == "on":
-            devices.append(Infinitude(zone.get("@id"), config))
+    for zone in systemStatus["zones"][0]["zone"]:
+        if zone["enabled"][0] == "on":
+            devices.append(InfinitudeZone(infinitude, zone["id"]))
     add_devices(devices)
 
-class Infinitude(ClimateDevice):
-    def __init__(self, zoneID, config):
-        self._zoneID = zoneID
-        self._config = config
-        self._statusSystem = {}
-        self._statusZone = {}
-        self._configSystem = {}
-        self._configZone = {}
-        self.update()
+class Infinitude():
+    def __init__(self, host, port):
+        self.host = host
+        self.port = port
 
-    def httpGetJson(self, path):
-        req = urllib.request.Request("http://{}:{}{}".format(self._config.get("host"), self._config.get("port"), path))
+    def _httpGetJson(self, path):
+        req = urllib.request.Request("http://{}:{}{}".format(self.host, self.port, path))
         with urllib.request.urlopen(req) as response:
             data = json.loads(response.read().decode())
         return data
 
-    def httpPostJson(self, path, dataDict):
+    def _httpPostJson(self, path, dataDict):
         params = json.dumps(dataDict).encode("utf-8")
-        req = urllib.request.Request("http://{}:{}{}".format(self._config.get("host"), self._config.get("port"), path),
+        req = urllib.request.Request("http://{}:{}{}".format(self.host, self.port, path),
                                      data=params,
                                      headers={"content-type" : "application/json"})
         with urllib.request.urlopen(req) as response:
@@ -88,29 +87,75 @@ class Infinitude(ClimateDevice):
                 data = json.loads(responseData.decode())
         return data
 
+    def getSystemStatus(self):
+        status = self._httpGetJson("/api/status")
+        return status
+
+    def getSystemConfig(self):
+        config = self._httpGetJson("/api/config")
+        return config["data"]
+
+    def getZoneStatus(self, zoneID):
+        systemStatus =  self.getSystemStatus()
+        zoneStatus = next((z for z in systemStatus["zones"][0]["zone"] if z["id"] == zoneID), None)
+        return zoneStatus
+
+    def getZoneConfig(self, zoneID):
+        systemConfig =  self.getSystemConfig()
+        zoneConfig = next((z for z in systemConfig["zones"][0]["zone"] if z["id"] == zoneID), None)
+        return zoneConfig
+
+class InfinitudeZone(ClimateDevice):
+    def __init__(self, infinitude, zoneID):
+        self._infinitude = infinitude
+        self._zoneID = zoneID
+        self._statusSystem = {}
+        self._statusZone = {}
+        self._configSystem = {}
+        self._configZone = {}
+        self.update()
+
     def update(self):
-        self._statusSystem = self.httpGetJson("/api/status")["status"]
-        for zone in self._statusSystem["zones"]["zone"]:
-            if zone["@id"] == self._zoneID:
-                self._statusZone = zone
+        try:
+            self._statusSystem = self._infinitude.getSystemStatus()
+            self._configSystem = self._infinitude.getSystemConfig()
+            self._statusZone = self._infinitude.getZoneStatus(str(self._zoneID))
+            self._configZone = self._infinitude.getZoneConfig(str(self._zoneID))
+        except:
+            _LOGGER.error("Unable to retrieve data from Infinitude.  Error message: {}".format(sys.exc_info()[0]))
 
-        self._configSystem = self.httpGetJson("/api/system")["system"]["config"]
-        for zone in self._configSystem["zones"]["zone"]:
-            if zone["@id"] == self._zoneID:
-                self._configZone = zone
+        # These status values are always reliable
+        self._name = self._statusZone["name"][0]
+        self._temperature = float(self._statusZone["rt"][0])
+        self._hvacState = self._statusZone["zoneconditioning"][0]       # active_heat, active_cool, idle, more?
+        self._relativeHumidity = float(self._statusZone["rh"][0])
+        self._operatingMode = self._configSystem["mode"][0]             # auto, heat, cool, off, fanonly
+        self._holdState = self._configZone["hold"][0]                   # on, off
+        self._holdActivity = self._configZone["holdActivity"][0]        # home, away, sleep, wake, manual
+        self._holdUntil = self._configZone["otmr"][0]                   # HH:MM (on the quarter-hour)
 
-        self._name = self._statusZone["name"]
-        self._temperature = float(self._statusZone["rt"])
-        self._setbackHeat = float(self._statusZone["htsp"])
-        self._setbackCool = float(self._statusZone["clsp"])
-        self._relativeHumidity = float(self._statusZone["rh"])
-        self._operatingMode = self._configSystem["mode"]                # auto, heat, cool, off, fanonly
-        self._hvacState = self._statusZone["zoneconditioning"]          # active_heat, active_cool, idle, more?
-        self._fanMode = self._statusZone["fan"]                         # off, high, med, low
-        self._currentActivity = self._statusZone["currentActivity"]     # home, away, sleep, wake, manual
-        self._holdState = self._configZone["hold"]                      # on, off
-        self._holdActivity = self._configZone["holdActivity"]           # home, away, sleep, wake, manual
-        self._holdUntil = self._configZone["otmr"]                      # HH:MM (on the quarter-hour)
+        # These status values may be outdated if a pending
+        # manual override was submitted via the API - see below
+        self._setbackHeat = float(self._statusZone["htsp"][0])
+        self._setbackCool = float(self._statusZone["clsp"][0])
+        self._fanMode = self._statusZone["fan"][0]                      # off, high, med, low
+        self._currentActivity = self._statusZone["currentActivity"][0]  # home, away, sleep, wake, manual
+
+        # Status for setbacks and fan mode will only reflect API changes after an update/refresh cycle.
+        # But we want the frontend to immediately reflect the new value, which is also stored
+        # in the zone config.
+        #
+        # To get the true values, need to know what the current activity is.
+        # If holdActivity=manual in the zone config, we know the current activity is manual,
+        # even if the thermostat status does not yet reflect the change submitted via the API.
+        # We can override with the correct values from the zone config.
+        if self._configZone["holdActivity"][0] == "manual":
+            manualActivity = next((a for a in self._configZone["activities"][0]["activity"] if a["id"] == "manual"), None)
+            if manualActivity is not None:
+                self._currentActivity = "manual"
+                self._setbackHeat = float(manualActivity["htsp"][0])
+                self._setbackCool = float(manualActivity["clsp"][0])
+                self._fanMode = manualActivity["fan"][0]
 
         # Iterate through the system config to calculate the current and next schedule details
         # Looks for the next 'enabled' period in the zone program
@@ -118,24 +163,24 @@ class Infinitude(ClimateDevice):
         self._scheduledActivityStart = None
         self._nextActivity = None
         self._nextActivityStart = None
-        dt = datetime.datetime.strptime(self._statusSystem["localTime"][:-6], "%Y-%m-%dT%H:%M:%S") # Strip the TZ offset, since this is already in local time
+        dt = datetime.datetime.strptime(self._statusSystem["localTime"][0][:-6],
+                                        "%Y-%m-%dT%H:%M:%S")  # Strip the TZ offset, since this is already in local time
         while self._nextActivity is None:
             dayName = dt.strftime("%A")
-            program = next((day for day in self._configZone["program"]["day"] if day["@id"] == dayName))
+            program = next((day for day in self._configZone["program"][0]["day"] if day["id"] == dayName))
             for period in program["period"]:
-                if period["enabled"] == "off":
+                if period["enabled"][0] == "off":
                     continue
-                periodHH, periodMM = period["time"].split(":")
+                periodHH, periodMM = period["time"][0].split(":")
                 periodDt = datetime.datetime(dt.year, dt.month, dt.day, int(periodHH), int(periodMM))
                 if periodDt < dt:
-                    self._scheduledActivity = period["activity"]
+                    self._scheduledActivity = period["activity"][0]
                     self._scheduledActivityStart = periodDt
                 if periodDt >= dt:
-                    self._nextActivity = period["activity"]
+                    self._nextActivity = period["activity"][0]
                     self._nextActivityStart = periodDt
                     break
             dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day) + datetime.timedelta(days=1)
-            #dt += datetime.timedelta(days=1)
 
     @property
     def supported_features(self):
@@ -156,22 +201,15 @@ class Infinitude(ClimateDevice):
     def device_state_attributes(self):
         """Return the device specific state attributes."""
         attributes = {
-            "infinity_name": self._name,
-            "infinity_temperature": self._temperature,
-            "infinity_setbackHeat": self._setbackHeat,
-            "infinity_setbackCool": self._setbackCool,
-            "infinity_relativeHumidity": self._relativeHumidity,
-            "infinity_operatingMode": self._operatingMode,
-            "infinity_hvacState": self._hvacState,
-            "infinity_fanMode": self._fanMode,
-            "infinity_currentActivity": self._currentActivity,
-            "infinity_holdState": self._holdState,
-            "infinity_holdActivity": self._holdActivity,
-            "infinity_holdUntil": self._holdUntil,
-            "infinity_scheduledActivity": self._scheduledActivity,
-            "infinity_scheduledActivityStart": self._scheduledActivityStart,
-            "infinity_nextActivity": self._nextActivity,
-            "infinity_nextActivityStart": self._nextActivityStart,
+            "hvac_state": self._hvacState,
+            "current_activity": self._currentActivity,
+            "hold_state": self._holdState,
+            "hold_activity": self._holdActivity,
+            "hold_until": self._holdUntil,
+            "scheduled_activity": self._scheduledActivity,
+            "scheduled_activity_start": self._scheduledActivityStart,
+            "next_activity": self._nextActivity,
+            "next_activity_start": self._nextActivityStart,
         }
         return attributes
 
