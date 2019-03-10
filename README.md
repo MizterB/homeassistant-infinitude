@@ -16,9 +16,9 @@ Home Assistant custom component for controlling Carrier Infinity Touch thermosta
 ## Install with custom_updater
 _These instructions still need to be validated_
 
-This custom entity row can be integrated into [custom_updater](https://github.com/custom-components/custom_updater), so you can track future updates.  
+This custom component can be integrated into [custom_updater](https://github.com/custom-components/custom_updater), so you can track future updates.  
 
-As this is not included in the default card list, add the following to your `configuration.yaml`:
+As this is not included in the default custom component list, add the following to your `configuration.yaml`:
 
 ```yaml
 custom_updater:
@@ -27,7 +27,7 @@ custom_updater:
 ```
 
 # Configuration
-
+Add the following to your `configuration.yaml`:
 ```yaml
 climate:
   - platform: infinitude
