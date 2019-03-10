@@ -1,0 +1,12 @@
+{
+    "infinitude": {
+        "version": "0.1",
+        "local_location": "/custom_components/infinitude/__init__.py",
+        "remote_location": "https://raw.githubusercontent.com/MizterB/homeassistant-infinitude/master/custom_components/infinitude/__init__.py",
+        "visit_repo": "https://github.com/MizterB/homeassistant-infinitude",
+        "changelog": "https://github.com/MizterB/homeassistant-infinitude",
+        "resources": [
+            "https://raw.githubusercontent.com/MizterB/homeassistant-infinitude/master/custom_components/infinitude/climate.py"
+        ]
+    }
+}
