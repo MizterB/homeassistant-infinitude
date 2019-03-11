@@ -2,18 +2,16 @@
 Platform for exposing a Carrier Infinity Touch climate device through the
 Infinitude proxy application
 """
-from homeassistant.components.climate import (
-    ClimateDevice,
-    PLATFORM_SCHEMA,
+from homeassistant.components.climate import ClimateDevice, PLATFORM_SCHEMA
+from homeassistant.components.climate.const import (
     SUPPORT_TARGET_TEMPERATURE, SUPPORT_TARGET_TEMPERATURE_HIGH, SUPPORT_TARGET_TEMPERATURE_LOW,
     SUPPORT_AWAY_MODE, SUPPORT_HOLD_MODE, SUPPORT_FAN_MODE,
     SUPPORT_OPERATION_MODE,
-    STATE_AUTO, STATE_COOL, STATE_HEAT, STATE_IDLE, STATE_OFF, STATE_FAN_ONLY,
+    STATE_AUTO, STATE_COOL, STATE_HEAT, STATE_IDLE, STATE_FAN_ONLY,
     ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
 from homeassistant.const import (
-    CONF_HOST, CONF_PORT,
-    ATTR_TEMPERATURE, TEMP_FAHRENHEIT)
+    CONF_HOST, CONF_PORT, STATE_ON, STATE_OFF, ATTR_TEMPERATURE, TEMP_FAHRENHEIT)
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv

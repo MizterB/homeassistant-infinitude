@@ -37,5 +37,8 @@ climate:
 
 ## Changelog
 
+*0.2*
+- Updated constants to be compatible with HA .89
+
 *0.1*
 - Initial release
