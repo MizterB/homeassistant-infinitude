@@ -202,7 +202,7 @@ class InfinitudeZone(ClimateDevice):
         """Return the device specific state attributes."""
         attributes = {
             "hvac_state": self._hvacState,
-            "mode": self._mode,
+            "hvac_mode": self._mode,
             "outdoor_temperature": self._outdoorTemperature,
             "airflow_cfm": self._cfm,
             "occupancy": self._occupancy,
