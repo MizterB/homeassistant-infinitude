@@ -132,7 +132,6 @@ class InfinitudeZone(ClimateDevice):
         self._holdActivity = self._zoneConfig["holdActivity"][0]              # home, away, sleep, wake, manual
         self._holdUntil = self._zoneConfig["otmr"][0]                         # HH:MM (on the quarter-hour)
         self._occupancy = self._zoneStatus["occupancy"][0]                    # occupied, unoccupied
-        self._occupancyOverride = self._zoneStatus["occupancyOverride"][0]    # on, off
         self._cfm = float(self._systemStatus["idu"][0]["cfm"][0])
 
         # These status values may be outdated if a pending
@@ -206,7 +205,6 @@ class InfinitudeZone(ClimateDevice):
             "outdoor_temperature": self._outdoorTemperature,
             "airflow_cfm": self._cfm,
             "occupancy": self._occupancy,
-            "occupancy_override": self._occupancyOverride,
             "current_activity": self._currentActivity,
             "hold_state": self._holdState,
             "hold_activity": self._holdActivity,
