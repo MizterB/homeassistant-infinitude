@@ -123,12 +123,16 @@ class InfinitudeZone(ClimateDevice):
         # These status values are always reliable
         self._name = self._zoneStatus["name"][0]
         self._temperature = float(self._zoneStatus["rt"][0])
-        self._hvacState = self._zoneStatus["zoneconditioning"][0]       # active_heat, active_cool, idle, more?
+        self._outdoorTemperature = float(self._systemStatus["oat"][0])
+        self._hvacState = self._zoneStatus["zoneconditioning"][0]             # active_heat, active_cool, idle, more?
         self._relativeHumidity = float(self._zoneStatus["rh"][0])
-        self._operatingMode = self._systemConfig["mode"][0]             # auto, heat, cool, off, fanonly
-        self._holdState = self._zoneConfig["hold"][0]                   # on, off
-        self._holdActivity = self._zoneConfig["holdActivity"][0]        # home, away, sleep, wake, manual
-        self._holdUntil = self._zoneConfig["otmr"][0]                   # HH:MM (on the quarter-hour)
+        self._operatingMode = self._systemConfig["mode"][0]                   # auto, heat, cool, off, fanonly
+        self._mode = self._systemStatus["mode"][0]                            # hpheat, gasheat, off, cool?, auto?, fan?
+        self._holdState = self._zoneConfig["hold"][0]                         # on, off
+        self._holdActivity = self._zoneConfig["holdActivity"][0]              # home, away, sleep, wake, manual
+        self._holdUntil = self._zoneConfig["otmr"][0]                         # HH:MM (on the quarter-hour)
+        self._occupancy = self._zoneStatus["occupancy"][0]                    # occupied, unoccupied, motion
+        self._cfm = float(self._systemStatus["idu"][0]["cfm"][0])
 
         # These status values may be outdated if a pending
         # manual override was submitted via the API - see below
@@ -192,12 +196,15 @@ class InfinitudeZone(ClimateDevice):
     def should_poll(self):
         """Return the polling state."""
         return True
-
     @property
     def device_state_attributes(self):
         """Return the device specific state attributes."""
         attributes = {
             "hvac_state": self._hvacState,
+            "hvac_mode": self._mode,
+            "outdoor_temperature": self._outdoorTemperature,
+            "airflow_cfm": self._cfm,
+            "occupancy": self._occupancy,
             "current_activity": self._currentActivity,
             "hold_state": self._holdState,
             "hold_activity": self._holdActivity,
