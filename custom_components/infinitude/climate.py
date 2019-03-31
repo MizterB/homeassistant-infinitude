@@ -111,35 +111,48 @@ class InfinitudeZone(ClimateDevice):
         self.update()
 
     def update(self):
+        def getSafe(source, key, index=0):
+            val = source.get(key, None)
+            if val is None:
+                return None
+            elif index is None:
+                return val
+            else:
+                return val[index]
+
         try:
             self._systemStatus = self._infinitude.getStatus()
             self._systemConfig = self._infinitude.getConfig()
         except:
             _LOGGER.error("Unable to retrieve data from Infinitude.  Error message: {}".format(sys.exc_info()[0]))
             return
-        self._zoneStatus = next((z for z in self._systemStatus["zones"][0]["zone"] if z["id"] == self._zoneID), None)
-        self._zoneConfig = next((z for z in self._systemConfig["zones"][0]["zone"] if z["id"] == self._zoneID), None)
+        self._zoneStatus = next((z for z in getSafe(self._systemStatus, "zones")["zone"] if z["id"] == self._zoneID), None)
+        self._zoneConfig = next((z for z in getSafe(self._systemConfig, "zones")["zone"] if z["id"] == self._zoneID), None)
 
         # These status values are always reliable
-        self._name = self._zoneStatus["name"][0]
-        self._temperature = float(self._zoneStatus["rt"][0])
-        self._outdoorTemperature = float(self._systemStatus["oat"][0])
-        self._hvacState = self._zoneStatus["zoneconditioning"][0]             # active_heat, active_cool, idle, more?
-        self._relativeHumidity = float(self._zoneStatus["rh"][0])
-        self._operatingMode = self._systemConfig["mode"][0]                   # auto, heat, cool, off, fanonly
-        self._mode = self._systemStatus["mode"][0]                            # hpheat, gasheat, off, cool?, auto?, fan?
-        self._holdState = self._zoneConfig["hold"][0]                         # on, off
-        self._holdActivity = self._zoneConfig["holdActivity"][0]              # home, away, sleep, wake, manual
-        self._holdUntil = self._zoneConfig["otmr"][0]                         # HH:MM (on the quarter-hour)
-        self._occupancy = self._zoneStatus["occupancy"][0]                    # occupied, unoccupied, motion
-        self._cfm = float(self._systemStatus["idu"][0]["cfm"][0])
+        self._name = getSafe(self._zoneStatus, "name")
+        self._temperature = float(getSafe(self._zoneStatus, "rt"))
+        self._outdoorTemperature = float(getSafe(self._systemStatus, "oat"))
+        self._hvacState = getSafe(self._zoneStatus, "zoneconditioning")         # active_heat, active_cool, idle, more?
+        self._relativeHumidity = float(getSafe(self._zoneStatus, "rh"))
+        self._operatingMode = getSafe(self._systemConfig, "mode")               # auto, heat, cool, off, fanonly
+        self._mode = getSafe(self._systemStatus, "mode")                        # hpheat, gasheat, off, cool?, auto?, fan?
+        self._holdState = getSafe(self._zoneConfig, "hold")                     # on, off
+        self._holdActivity = getSafe(self._zoneConfig, "holdActivity")          # home, away, sleep, wake, manual
+        self._holdUntil = getSafe(self._zoneConfig, "otmr")                     # HH:MM (on the quarter-hour)
+        self._occupancy = getSafe(self._zoneStatus, "occupancy")                # occupied, unoccupied, motion
+
+        idu = getSafe(self._systemStatus, "idu")
+        self._cfm = None
+        if idu is not None:
+            self._cfm = float(getSafe(idu, "cfm"))
 
         # These status values may be outdated if a pending
         # manual override was submitted via the API - see below
-        self._setbackHeat = float(self._zoneStatus["htsp"][0])
-        self._setbackCool = float(self._zoneStatus["clsp"][0])
-        self._fanMode = self._zoneStatus["fan"][0]                      # off, high, med, low
-        self._currentActivity = self._zoneStatus["currentActivity"][0]  # home, away, sleep, wake, manual
+        self._setbackHeat = float(getSafe(self._zoneStatus, "htsp"))
+        self._setbackCool = float(getSafe(self._zoneStatus, "clsp"))
+        self._fanMode = getSafe(self._zoneStatus, "fan")                        # off, high, med, low
+        self._currentActivity = getSafe(self._zoneStatus, "currentActivity")    # home, away, sleep, wake, manual
 
         # Status for setbacks and fan mode will only reflect API changes after an update/refresh cycle.
         # But we want the frontend to immediately reflect the new value, which is also stored
@@ -149,13 +162,13 @@ class InfinitudeZone(ClimateDevice):
         # If holdActivity=manual in the zone config, we know the current activity is manual,
         # even if the thermostat status does not yet reflect the change submitted via the API.
         # We can override with the correct values from the zone config.
-        if self._zoneConfig["holdActivity"][0] == "manual":
-            manualActivity = next((a for a in self._zoneConfig["activities"][0]["activity"] if a["id"] == "manual"), None)
+        if getSafe(self._zoneConfig, "holdActivity") == "manual":
+            manualActivity = next((a for a in getSafe(self._zoneConfig, "activities")["activity"] if a["id"] == "manual"), None)
             if manualActivity is not None:
                 self._currentActivity = "manual"
-                self._setbackHeat = float(manualActivity["htsp"][0])
-                self._setbackCool = float(manualActivity["clsp"][0])
-                self._fanMode = manualActivity["fan"][0]
+                self._setbackHeat = float(getSafe(manualActivity, "htsp"))
+                self._setbackCool = float(getSafe(manualActivity, "clsp"))
+                self._fanMode = getSafe(manualActivity, "fan")
 
         # Iterate through the system config to calculate the current and next schedule details
         # Looks for the next 'enabled' period in the zone program
@@ -163,21 +176,21 @@ class InfinitudeZone(ClimateDevice):
         self._scheduledActivityStart = None
         self._nextActivity = None
         self._nextActivityStart = None
-        dt = datetime.datetime.strptime(self._systemStatus["localTime"][0][:-6],
+        dt = datetime.datetime.strptime(getSafe(self._systemStatus, "localTime")[:-6],
                                         "%Y-%m-%dT%H:%M:%S")  # Strip the TZ offset, since this is already in local time
         while self._nextActivity is None:
             dayName = dt.strftime("%A")
-            program = next((day for day in self._zoneConfig["program"][0]["day"] if day["id"] == dayName))
+            program = next((day for day in getSafe(self._zoneConfig, "program")["day"] if day["id"] == dayName))
             for period in program["period"]:
-                if period["enabled"][0] == "off":
+                if getSafe(period, "enabled") == "off":
                     continue
-                periodHH, periodMM = period["time"][0].split(":")
+                periodHH, periodMM = getSafe(period, "time").split(":")
                 periodDt = datetime.datetime(dt.year, dt.month, dt.day, int(periodHH), int(periodMM))
                 if periodDt < dt:
-                    self._scheduledActivity = period["activity"][0]
+                    self._scheduledActivity = getSafe(period, "activity")
                     self._scheduledActivityStart = periodDt
                 if periodDt >= dt:
-                    self._nextActivity = period["activity"][0]
+                    self._nextActivity = getSafe(period, "activity")
                     self._nextActivityStart = periodDt
                     break
             dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day) + datetime.timedelta(days=1)
