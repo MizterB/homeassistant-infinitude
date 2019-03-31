@@ -64,9 +64,13 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     status = infinitude.getStatus()
 
     devices = []
-    for zone in status["zones"][0]["zone"]:
-        if zone["enabled"][0] == "on":
-            devices.append(InfinitudeZone(infinitude, zone["id"]))
+    zones = status["zones"][0]["zone"]
+    for i in range(len(zones)):
+        zoneName = None
+        if "zone_names" in config and len(config["zone_names"]) >= i+1:
+            zoneName = config["zone_names"][i]
+        if zones[i]["enabled"][0] == "on":
+            devices.append(InfinitudeZone(infinitude, zones[i]["id"], zoneName))
     add_devices(devices)
 
 class Infinitude():
@@ -95,9 +99,10 @@ class Infinitude():
         return config["data"]
 
 class InfinitudeZone(ClimateDevice):
-    def __init__(self, infinitude, zoneID):
+    def __init__(self, infinitude, zoneID, customName=None):
         self._infinitude = infinitude
         self._zoneID = zoneID
+        self._customName = customName
         self._systemStatus = {}
         self._systemConfig = {}
         self._zoneStatus = {}
@@ -232,7 +237,10 @@ class InfinitudeZone(ClimateDevice):
     @property
     def name(self):
         """Return the name of the climate device."""
-        return self._name
+        if self._customName is not None:
+            return self._customName
+        else:
+            return self._name
 
     @property
     def current_temperature(self):
