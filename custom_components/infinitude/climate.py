@@ -361,11 +361,11 @@ class InfinitudeZone(ClimateDevice):
                 self._setbackCool = kwargs["temperature"]
                 data["clsp"] = kwargs["temperature"]
         if ATTR_TARGET_TEMP_HIGH in kwargs:
-            self._setbackHeat = kwargs[ATTR_TARGET_TEMP_HIGH]
-            data["htsp"] = kwargs[ATTR_TARGET_TEMP_HIGH]
+            self._setbackCool = kwargs[ATTR_TARGET_TEMP_HIGH]
+            data["clsp"] = kwargs[ATTR_TARGET_TEMP_HIGH]
         if ATTR_TARGET_TEMP_LOW in kwargs:
-            self._setbackCool = kwargs[ATTR_TARGET_TEMP_LOW]
-            data["clsp"] = kwargs[ATTR_TARGET_TEMP_LOW]
+            self._setbackHeat = kwargs[ATTR_TARGET_TEMP_LOW]
+            data["htsp"] = kwargs[ATTR_TARGET_TEMP_LOW]
 
         # Update the 'manual' activity with the updated temperatures
         # Switch to the 'manual' activity and hold until the next scheduled activity
