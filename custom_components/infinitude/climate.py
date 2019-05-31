@@ -137,7 +137,6 @@ class InfinitudeZone(ClimateDevice):
         # These status values are always reliable
         self._name = getSafe(self._zoneStatus, "name")
         self._temperature = float(getSafe(self._zoneStatus, "rt"))
-        self._outdoorTemperature = float(getSafe(self._systemStatus, "oat"))
         self._hvacState = getSafe(self._zoneStatus, "zoneconditioning")         # active_heat, active_cool, idle, more?
         self._relativeHumidity = float(getSafe(self._zoneStatus, "rh"))
         self._operatingMode = getSafe(self._systemConfig, "mode")               # auto, heat, cool, off, fanonly
@@ -148,10 +147,18 @@ class InfinitudeZone(ClimateDevice):
         self._occupancy = getSafe(self._zoneStatus, "occupancy")                # occupied, unoccupied, motion
         self._units = getSafe(self._systemConfig, "cfgem")                      # F, C
 
+        # Only get CFM if IDU is present
         idu = getSafe(self._systemStatus, "idu")
         self._cfm = None
         if idu is not None:
             self._cfm = float(getSafe(idu, "cfm"))
+
+        # Safely handle missing outdoor temperature
+        oat = getSafe(self._systemStatus, "oat")
+        if isinstance(oat, dict):
+            self._outdoorTemperature = None
+        else:
+            self._outdoorTemperature = oat
 
         # These status values may be outdated if a pending
         # manual override was submitted via the API - see below
