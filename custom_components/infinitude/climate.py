@@ -11,7 +11,7 @@ from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
 from homeassistant.const import (
-    CONF_HOST, CONF_PORT, STATE_ON, STATE_OFF, ATTR_TEMPERATURE, TEMP_FAHRENHEIT)
+    CONF_HOST, CONF_PORT, STATE_ON, STATE_OFF, ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS)
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
@@ -146,6 +146,7 @@ class InfinitudeZone(ClimateDevice):
         self._holdActivity = getSafe(self._zoneConfig, "holdActivity")          # home, away, sleep, wake, manual
         self._holdUntil = getSafe(self._zoneConfig, "otmr")                     # HH:MM (on the quarter-hour)
         self._occupancy = getSafe(self._zoneStatus, "occupancy")                # occupied, unoccupied, motion
+        self._units = getSafe(self._systemConfig, "cfgem")                      # F, C
 
         idu = getSafe(self._systemStatus, "idu")
         self._cfm = None
@@ -208,7 +209,10 @@ class InfinitudeZone(ClimateDevice):
     @property
     def temperature_unit(self):
         """Return the unit of measurement."""
-        return TEMP_FAHRENHEIT
+        if self._units == "C":
+            return TEMP_CELSIUS
+        else:
+            return TEMP_FAHRENHEIT
 
     @property
     def should_poll(self):
