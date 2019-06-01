@@ -43,7 +43,7 @@ ACTIVITY_INDEX = {
     "home": 0,
     "away": 1,
     "sleep": 2,
-    "away": 3,
+    "wake": 3,
     "manual": 4
 }
 
