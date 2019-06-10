@@ -11,7 +11,7 @@ from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_LOW, ATTR_TARGET_TEMP_HIGH)
 
 from homeassistant.const import (
-    CONF_HOST, CONF_PORT, STATE_ON, STATE_OFF, ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS)
+    CONF_HOST, CONF_PORT, STATE_ON, STATE_OFF, ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS, ATTR_ENTITY_ID)
 
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
@@ -55,6 +55,8 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Optional(CONF_PORT, default=3000): cv.port,
 })
 
+ATTR_SET_HOLD_MODE = "set_hold_mode"
+
 def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the connection"""
     host = config.get(CONF_HOST)
@@ -72,6 +74,27 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         if zones[i]["enabled"][0] == "on":
             devices.append(InfinitudeZone(infinitude, zones[i]["id"], zoneName))
     add_devices(devices)
+
+    def service_set_hold_mode(service):
+        """Set the Hold Mode on the target thermostats."""
+        # TODO: Add constants and a service schema?
+        entity_id = service.data.get(ATTR_ENTITY_ID)
+        hold_mode = service.data.get("mode")
+        hold_until = service.data.get("until")
+        hold_activity = service.data.get("activity")
+
+        if entity_id:
+            target_zones = [device for device in devices
+                                if device.entity_id in entity_id]
+        else:
+            target_zones = devices
+
+        for zone in target_zones:
+            zone.set_hold_mode(hold=hold_mode, until=hold_until, activity=hold_activity)
+
+    hass.services.register('infinitude', "set_hold_mode",
+                           service_set_hold_mode)
+    return True
 
 class Infinitude():
     def __init__(self, host, port):
@@ -420,12 +443,29 @@ class InfinitudeZone(ClimateDevice):
 
     def set_hold_mode(self, hold, **kwargs):
         """Update hold mode."""
-        activity = kwargs.get("activity", self._currentActivity)
-        until = kwargs.get("until", self._nextActivityStart.strftime("%H:%M"))  # Default hold until next scheduled period
+        # TODO: Add validation of inputs
+
+        # Default mode is 'hold until'
+        if hold is None:
+            hold = HOLD_MODE_HOLDUNTIL
+
+        activity = kwargs.get("activity")
+        # Default activity is current activity
+        if activity is None:
+            activity = self._currentActivity
+
+        until = kwargs.get("until")
+        # Default hold until next scheduled period
+        if until is None:
+            until = self._nextActivityStart.strftime("%H:%M")
+
+        data = None
         if hold == HOLD_MODE_PERSCHEDULE:
             data = {"hold": "off", "holdActivity": "", "otmr": ""}
         elif hold == HOLD_MODE_HOLD:
             data = {"hold": "on", "holdActivity": activity, "otmr": ""}
         elif hold == HOLD_MODE_HOLDUNTIL:
             data = {"hold": "on", "holdActivity": activity, "otmr": until}
-        self._infinitude.callAPI("/api/config/zones/zone/{}/".format(self._zoneIndex), data)
+
+        if data is not None:
+            self._infinitude.callAPI("/api/config/zones/zone/{}/".format(self._zoneIndex), data)

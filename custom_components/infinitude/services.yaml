@@ -1,0 +1,15 @@
+set_hold_mode:
+  description: Sets the Hold Mode and Activity for an Infinitude zone
+  fields:
+    entity_id:
+      description: "Comma-separated list of Infinitude zone entity_ids to apply the hold to.  If not provided, all zones will be updated."
+      example: "'climate.living_room', ['climate.living_room', 'climate.kitchen']"
+    mode:
+      description: "Name of the hold mode to apply.  If not provided, defaults to 'hold until'.  NOTE: 'hold until' expects an additional 'until' parameter to be provided."
+      example: "'hold', 'hold until', 'per schedule'"
+    until:
+      description: "Time at which the hold expires and the normal schedule resumes.  Must be on a 15-minute interval of a 24-hour clock.  If not provided, defaults to the start time of the next scheduled activity."
+      example: "'15:00', '15:15', '15:30', '15:45'"
+    activity:
+      description: "Name of the activity profile to hold with.  If not provided, defaults to the current activity."
+      example: "'home', 'away', 'sleep', 'wake', 'manual'"

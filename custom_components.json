@@ -1,6 +1,6 @@
 {
     "infinitude": {
-        "version": "0.4",
+        "version": "0.5",
         "local_location": "/custom_components/infinitude/__init__.py",
         "remote_location": "https://raw.githubusercontent.com/MizterB/homeassistant-infinitude/master/custom_components/infinitude/__init__.py",
         "visit_repo": "https://github.com/MizterB/homeassistant-infinitude",

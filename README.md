@@ -40,6 +40,9 @@ climate:
 ```
 Custom zone names are optional, and are applied in ascending order (zones 1-8).  If not provided, the zone name is retrieved from the thermostat itself.
 ## Changelog
+*0.5*
+- New service 'infinitude.set_hold_mode' enables changing activities and corresponding hold settings.
+
 *0.4*
 - Added manifest.json
 - Fixed temperature setting reversal while on Auto mode(thanks @ccalica!)
