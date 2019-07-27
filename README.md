@@ -40,6 +40,15 @@ climate:
 ```
 Custom zone names are optional, and are applied in ascending order (zones 1-8).  If not provided, the zone name is retrieved from the thermostat itself.
 ## Changelog
+*0.6*
+- Rewritten for compatibility with the new climate spec in HA .96
+- New presets available to quickly change activities and manage hold settings:
+  - 'Scheduled' preset restores the currently scheduled activity
+  - 'Activity' presets override the currently scheduled activity until the next schedule change
+  - 'Override' preset holds any setting changes until the next schedule change (automatically enabled on temperature & fan changes)
+  - 'Hold' preset holds any setting changes indefinitely
+- Service set_hold_mode is mostly replaced by presets, but can still be used for setting specific 'hold until' times
+
 *0.5*
 - New service 'infinitude.set_hold_mode' enables changing activities and corresponding hold settings.
 
