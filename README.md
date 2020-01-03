@@ -40,6 +40,9 @@ climate:
 ```
 Custom zone names are optional, and are applied in ascending order (zones 1-8).  If not provided, the zone name is retrieved from the thermostat itself.
 ## Changelog
+*0.7*
+- Update date time interpretation string
+- Update configuration schema to support custom zone names in HA 0.103
 *0.6*
 - Rewritten for compatibility with the new climate spec in HA .96
 - New presets available to quickly change activities and manage hold settings:

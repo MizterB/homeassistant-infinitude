@@ -60,6 +60,7 @@ PRESET_MODES = [PRESET_SCHEDULE, PRESET_HOME, PRESET_AWAY, PRESET_SLEEP, PRESET_
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PORT, default=3000): cv.port,
+    vol.Optional('zone_names', default=[]): list,
 })
 
 
@@ -276,8 +277,14 @@ class InfinitudeZone(ClimateDevice):
         self.activity_scheduled_start = None
         self.activity_next = None
         self.activity_next_start = None
-        dt = datetime.datetime.strptime(get_safe(self.system_status, "localTime")[:-6],
-                                        "%Y-%m-%dT%H:%M:%S")  # Strip the TZ offset, since this is already in local time
+        #'2019-12-15T16' does not match format '%Y-%m-%dT%H:%M:%S
+        _LOGGER.debug(get_safe(self.system_status, "localTime"))
+        try:
+            dt = datetime.datetime.strptime(get_safe(self.system_status, "localTime")[:-6],
+                                            "%Y-%m-%dT%H")  # Strip the TZ offset, since this is already in local time
+        except ValueError:
+            dt = datetime.datetime.strptime(get_safe(self.system_status, "localTime")[:-6],
+                                            "%Y-%m-%dT%H:%M:%S")  # Strip the TZ offset, since this is already in local time
         while self.activity_next is None:
             day_name = dt.strftime("%A")
             program = next((day for day in get_safe(self.zone_config, "program")["day"] if day["id"] == day_name))
