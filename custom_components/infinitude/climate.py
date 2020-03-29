@@ -61,6 +61,7 @@ PRESET_MODES = [PRESET_SCHEDULE, PRESET_HOME, PRESET_AWAY, PRESET_SLEEP, PRESET_
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PORT, default=3000): cv.port,
+    vol.Optional('zone_names', default=[]): list
 })
 
 
@@ -73,14 +74,18 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     status = infinitude.status()
 
     devices = []
-
-    # Create Infinitude devices for each zone that is enabled
-    # Override the zone name if defined in the platform configuration
+    
+    # Create devices
     zones = status["zones"][0]["zone"]
     for i in range(len(zones)):
         zone_name = None
+        # Manually set zone names if defined in the platform configuration
+        # Keep the system-defined zone name if a manual name is empty/None
         if "zone_names" in config and len(config["zone_names"]) >= i+1:
-            zone_name = config["zone_names"][i]
+            name_override = config["zone_names"][i]
+            if name_override is not None:
+                zone_name = name_override
+        # Only create if the zone is enabled
         if zones[i]["enabled"][0] == "on":
             devices.append(InfinitudeZone(infinitude, zones[i]["id"], zone_name))
     add_devices(devices)
