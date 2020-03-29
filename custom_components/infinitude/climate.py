@@ -17,6 +17,7 @@ from urllib import request, parse
 from urllib.error import URLError
 import json
 import datetime
+import re
 import logging
 
 _LOGGER = logging.getLogger(__name__)
@@ -60,6 +61,7 @@ PRESET_MODES = [PRESET_SCHEDULE, PRESET_HOME, PRESET_AWAY, PRESET_SLEEP, PRESET_
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
     vol.Required(CONF_HOST): cv.string,
     vol.Optional(CONF_PORT, default=3000): cv.port,
+    vol.Optional('zone_names', default=[]): list
 })
 
 
@@ -72,14 +74,18 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     status = infinitude.status()
 
     devices = []
-
-    # Create Infinitude devices for each zone that is enabled
-    # Override the zone name if defined in the platform configuration
+    
+    # Create devices
     zones = status["zones"][0]["zone"]
     for i in range(len(zones)):
         zone_name = None
+        # Manually set zone names if defined in the platform configuration
+        # Keep the system-defined zone name if a manual name is empty/None
         if "zone_names" in config and len(config["zone_names"]) >= i+1:
-            zone_name = config["zone_names"][i]
+            name_override = config["zone_names"][i]
+            if name_override is not None:
+                zone_name = name_override
+        # Only create if the zone is enabled
         if zones[i]["enabled"][0] == "on":
             devices.append(InfinitudeZone(infinitude, zones[i]["id"], zone_name))
     add_devices(devices)
@@ -110,17 +116,18 @@ class Infinitude:
         self.host = host
         self.port = port
 
-    def api(self, path, params=None):
+    def api(self, path, req_data=None):
         url = "http://{}:{}{}".format(self.host, self.port, path)
-        if params is not None:
-            query = parse.urlencode(params)
-            url = "{}?{}".format(url, query)
-        _LOGGER.debug(url)
-        req = request.Request(url)
+
+        # If data is provided, encode for POSTing
+        if req_data is not None:
+            req_data = parse.urlencode(req_data).encode("ascii")
+        _LOGGER.debug(url, req_data)
+        req = request.Request(url, req_data)
         with request.urlopen(req) as response:
-            data = json.loads(response.read().decode())
-        _LOGGER.debug(data)
-        return data
+            resp_data = json.loads(response.read().decode())
+        _LOGGER.debug(resp_data)
+        return resp_data
 
     def status(self):
         status = self.api("/api/status")
@@ -276,8 +283,14 @@ class InfinitudeZone(ClimateDevice):
         self.activity_scheduled_start = None
         self.activity_next = None
         self.activity_next_start = None
-        dt = datetime.datetime.strptime(get_safe(self.system_status, "localTime")[:-6],
-                                        "%Y-%m-%dT%H:%M:%S")  # Strip the TZ offset, since this is already in local time
+
+        # Current timestamp can include a TZ offset in some systems.  It should be stripped off
+        # since the timestamp is already in the local time.
+        local_time = get_safe(self.system_status, "localTime")
+        matches = re.match(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$', local_time)
+        local_time = matches.group(1)
+        dt = datetime.datetime.strptime(local_time, "%Y-%m-%dT%H:%M:%S")
+
         while self.activity_next is None:
             day_name = dt.strftime("%A")
             program = next((day for day in get_safe(self.zone_config, "program")["day"] if day["id"] == day_name))

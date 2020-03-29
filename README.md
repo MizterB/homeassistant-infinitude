@@ -34,12 +34,20 @@ climate:
     host: <infinitude_hostname_or_ip>
     port: <optional, defaults to 3000>
     zone_names:
-      - Custom Name 1
-      - Custom Name 2
+      - Custom Zone Name 1
+      - 
+      - Custom Zone Name 3
       - ...
 ```
-Custom zone names are optional, and are applied in ascending order (zones 1-8).  If not provided, the zone name is retrieved from the thermostat itself.
+Custom zone names are optional, and are applied in ascending order (zones 1-8).  If a blank name is provided (like in the second entry above), the zone name is retrieved from the thermostat itself.
+
+
 ## Changelog
+*0.7*
+- Submit changes via POST to be compatible with latest Infinitude API ([see commit](https://github.com/MizterB/infinitude/commit/a0c3b7a58c1c3535a0811001bcfed2c43c672906))
+- Handle timezone offsets being inconsistently passed in localTime.
+- Make custom zone names optional, and with ability to only override specific zones
+
 *0.6*
 - Rewritten for compatibility with the new climate spec in HA .96
 - New presets available to quickly change activities and manage hold settings:
