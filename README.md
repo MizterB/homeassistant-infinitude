@@ -43,6 +43,9 @@ Custom zone names are optional, and are applied in ascending order (zones 1-8). 
 
 
 ## Changelog
+*0.7.1*
+- Extend ClimateEntity, rather than ClimateDevice
+  
 *0.7*
 - Submit changes via POST to be compatible with latest Infinitude API ([see commit](https://github.com/MizterB/infinitude/commit/a0c3b7a58c1c3535a0811001bcfed2c43c672906))
 - Handle timezone offsets being inconsistently passed in localTime.

@@ -4,13 +4,34 @@ Infinitude proxy application
 """
 from homeassistant.components.climate import ClimateDevice, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
-    HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL, HVAC_MODE_FAN_ONLY,
-    FAN_AUTO, FAN_LOW, FAN_MEDIUM, FAN_HIGH,
-    CURRENT_HVAC_OFF, CURRENT_HVAC_HEAT, CURRENT_HVAC_COOL, CURRENT_HVAC_IDLE,
-    ATTR_TARGET_TEMP_HIGH, ATTR_TARGET_TEMP_LOW,
-    SUPPORT_TARGET_TEMPERATURE, SUPPORT_TARGET_TEMPERATURE_RANGE, SUPPORT_FAN_MODE, SUPPORT_PRESET_MODE)
+    HVAC_MODE_OFF,
+    HVAC_MODE_HEAT,
+    HVAC_MODE_COOL,
+    HVAC_MODE_HEAT_COOL,
+    HVAC_MODE_FAN_ONLY,
+    FAN_AUTO,
+    FAN_LOW,
+    FAN_MEDIUM,
+    FAN_HIGH,
+    CURRENT_HVAC_OFF,
+    CURRENT_HVAC_HEAT,
+    CURRENT_HVAC_COOL,
+    CURRENT_HVAC_IDLE,
+    ATTR_TARGET_TEMP_HIGH,
+    ATTR_TARGET_TEMP_LOW,
+    SUPPORT_TARGET_TEMPERATURE,
+    SUPPORT_TARGET_TEMPERATURE_RANGE,
+    SUPPORT_FAN_MODE,
+    SUPPORT_PRESET_MODE,
+)
 from homeassistant.const import (
-    CONF_HOST, CONF_PORT, ATTR_TEMPERATURE, TEMP_FAHRENHEIT, TEMP_CELSIUS, ATTR_ENTITY_ID)
+    CONF_HOST,
+    CONF_PORT,
+    ATTR_TEMPERATURE,
+    TEMP_FAHRENHEIT,
+    TEMP_CELSIUS,
+    ATTR_ENTITY_ID,
+)
 import voluptuous as vol
 import homeassistant.helpers.config_validation as cv
 from urllib import request, parse
@@ -47,22 +68,33 @@ ACTIVITY_WAKE_INDEX = 3
 ACTIVITY_MANUAL_INDEX = 4
 
 # Preset modes supported by this component
-PRESET_SCHEDULE = "Schedule"        # Restore the normal daily schedule
-PRESET_HOME = "Home"                # Switch to 'Home' activity until the next schedule change
-PRESET_AWAY = "Away"                # Switch to 'Away' activity until the next schedule change
-PRESET_SLEEP = "Sleep"              # Switch to 'Sleep' activity until the next schedule change
-PRESET_WAKE = "Wake"                # Switch to 'Wake' activity until the next schedule change
-PRESET_MANUAL_TEMP = "Override"     # Override currently scheduled activity until the next schedule change
-PRESET_MANUAL_PERM = "Hold"         # Override the schedule indefinitely
+PRESET_SCHEDULE = "Schedule"  # Restore the normal daily schedule
+PRESET_HOME = "Home"  # Switch to 'Home' activity until the next schedule change
+PRESET_AWAY = "Away"  # Switch to 'Away' activity until the next schedule change
+PRESET_SLEEP = "Sleep"  # Switch to 'Sleep' activity until the next schedule change
+PRESET_WAKE = "Wake"  # Switch to 'Wake' activity until the next schedule change
+PRESET_MANUAL_TEMP = (
+    "Override"  # Override currently scheduled activity until the next schedule change
+)
+PRESET_MANUAL_PERM = "Hold"  # Override the schedule indefinitely
 
-PRESET_MODES = [PRESET_SCHEDULE, PRESET_HOME, PRESET_AWAY, PRESET_SLEEP, PRESET_WAKE,
-                PRESET_MANUAL_TEMP, PRESET_MANUAL_PERM]
+PRESET_MODES = [
+    PRESET_SCHEDULE,
+    PRESET_HOME,
+    PRESET_AWAY,
+    PRESET_SLEEP,
+    PRESET_WAKE,
+    PRESET_MANUAL_TEMP,
+    PRESET_MANUAL_PERM,
+]
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Required(CONF_HOST): cv.string,
-    vol.Optional(CONF_PORT, default=3000): cv.port,
-    vol.Optional('zone_names', default=[]): list
-})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Required(CONF_HOST): cv.string,
+        vol.Optional(CONF_PORT, default=3000): cv.port,
+        vol.Optional("zone_names", default=[]): list,
+    }
+)
 
 
 def setup_platform(hass, config, add_devices, discovery_info=None):
@@ -74,14 +106,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     status = infinitude.status()
 
     devices = []
-    
+
     # Create devices
     zones = status["zones"][0]["zone"]
     for i in range(len(zones)):
         zone_name = None
         # Manually set zone names if defined in the platform configuration
         # Keep the system-defined zone name if a manual name is empty/None
-        if "zone_names" in config and len(config["zone_names"]) >= i+1:
+        if "zone_names" in config and len(config["zone_names"]) >= i + 1:
             name_override = config["zone_names"][i]
             if name_override is not None:
                 zone_name = name_override
@@ -99,15 +131,16 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
         activity = service.data.get("activity")
 
         if entity_id:
-            target_zones = [device for device in devices
-                            if device.entity_id in entity_id]
+            target_zones = [
+                device for device in devices if device.entity_id in entity_id
+            ]
         else:
             target_zones = devices
 
         for zone in target_zones:
             zone.set_hold_mode(mode=mode, until=until, activity=activity)
 
-    hass.services.register('infinitude', "set_hold_mode", service_set_hold_mode)
+    hass.services.register("infinitude", "set_hold_mode", service_set_hold_mode)
     return True
 
 
@@ -138,7 +171,7 @@ class Infinitude:
         return config["data"]
 
 
-class InfinitudeZone(ClimateDevice):
+class InfinitudeZone(ClimateEntity):
     def __init__(self, infinitude, zone_id, zone_name_custom=None):
         self.infinitude = infinitude
         self.zone_id = zone_id
@@ -149,26 +182,26 @@ class InfinitudeZone(ClimateDevice):
         self.zone_status = {}
         self.zone_config = {}
 
-        self._temperature_unit = None           # F, C
+        self._temperature_unit = None  # F, C
         self._current_temperature = None
         self._current_humidity = None
-        self._hvac_mode = None                  # auto, heat, cool, off, fanonly
-        self._hvac_action = None                # active_heat, active_cool, idle, more?
-        self._fan_mode = None                   # off, high, med, low
+        self._hvac_mode = None  # auto, heat, cool, off, fanonly
+        self._hvac_action = None  # active_heat, active_cool, idle, more?
+        self._fan_mode = None  # off, high, med, low
 
         self.zone_name = None
-        self.hold_state = None                  # on, off
-        self.hold_activity = None               # home, away, sleep, wake, manual
-        self.hold_until = None                  # HH:MM (on the quarter-hour)
-        self.hold_mode = None                   # Computed - not in the API
+        self.hold_state = None  # on, off
+        self.hold_activity = None  # home, away, sleep, wake, manual
+        self.hold_until = None  # HH:MM (on the quarter-hour)
+        self.hold_mode = None  # Computed - not in the API
         self.setpoint_heat = None
         self.setpoint_cool = None
-        self.activity_current = None            # Computed - NOT the API status value
+        self.activity_current = None  # Computed - NOT the API status value
         self.activity_scheduled = None
         self.activity_scheduled_start = None
         self.activity_next = None
         self.activity_next_start = None
-        self.occupancy = None                   # occupied, unoccupied, motion
+        self.occupancy = None  # occupied, unoccupied, motion
         self.airflow_cfm = None
         self.outdoor_temperature = None
 
@@ -177,7 +210,7 @@ class InfinitudeZone(ClimateDevice):
         # Needed for API calls that update Zones, which use a zero-based zone index
         # Assuming that Zones are always listed in ascending order of their "ID" attribute
         # See https://github.com/nebulous/infinitude/issues/65#issuecomment-447971081
-        self.zone_index = int(self.zone_id)-1
+        self.zone_index = int(self.zone_id) - 1
 
         # Populate with initial values
         self.update()
@@ -196,7 +229,6 @@ class InfinitudeZone(ClimateDevice):
         return True
 
     def update(self):
-
         def get_safe(source, key, index=0, empty_dict_as_none=True):
             """Helper function to safely parse JSON coming from Infinitude,
             where single values can be returned as lists"""
@@ -217,14 +249,28 @@ class InfinitudeZone(ClimateDevice):
             self.system_status = self.infinitude.status()
             self.system_config = self.infinitude.config()
         except URLError as e:
-            _LOGGER.error("Unable to retrieve data from Infinitude: {}".format(e.reason))
+            _LOGGER.error(
+                "Unable to retrieve data from Infinitude: {}".format(e.reason)
+            )
             return
 
         # Parse system data for zone-specific information
-        self.zone_status = next((z for z in get_safe(self.system_status, "zones")["zone"]
-                                 if z["id"] == self.zone_id), None)
-        self.zone_config = next((z for z in get_safe(self.system_config, "zones")["zone"]
-                                 if z["id"] == self.zone_id), None)
+        self.zone_status = next(
+            (
+                z
+                for z in get_safe(self.system_status, "zones")["zone"]
+                if z["id"] == self.zone_id
+            ),
+            None,
+        )
+        self.zone_config = next(
+            (
+                z
+                for z in get_safe(self.system_config, "zones")["zone"]
+                if z["id"] == self.zone_id
+            ),
+            None,
+        )
 
         # These status values are always reliable
         self.zone_name = get_safe(self.zone_status, "name")
@@ -269,8 +315,14 @@ class InfinitudeZone(ClimateDevice):
         # even if the thermostat status does not yet reflect the change submitted via the API.
         # We can override with the correct values from the zone config.
         if get_safe(self.zone_config, "holdActivity") == "manual":
-            activity_manual = next((a for a in get_safe(self.zone_config, "activities")["activity"]
-                                   if a["id"] == "manual"), None)
+            activity_manual = next(
+                (
+                    a
+                    for a in get_safe(self.zone_config, "activities")["activity"]
+                    if a["id"] == "manual"
+                ),
+                None,
+            )
             if activity_manual is not None:
                 self.activity_current = "manual"
                 self.setpoint_heat = float(get_safe(activity_manual, "htsp"))
@@ -287,18 +339,28 @@ class InfinitudeZone(ClimateDevice):
         # Current timestamp can include a TZ offset in some systems.  It should be stripped off
         # since the timestamp is already in the local time.
         local_time = get_safe(self.system_status, "localTime")
-        matches = re.match(r'^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$', local_time)
+        matches = re.match(
+            r"^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})([+-]\d{2}:\d{2})?$", local_time
+        )
         local_time = matches.group(1)
         dt = datetime.datetime.strptime(local_time, "%Y-%m-%dT%H:%M:%S")
 
         while self.activity_next is None:
             day_name = dt.strftime("%A")
-            program = next((day for day in get_safe(self.zone_config, "program")["day"] if day["id"] == day_name))
+            program = next(
+                (
+                    day
+                    for day in get_safe(self.zone_config, "program")["day"]
+                    if day["id"] == day_name
+                )
+            )
             for period in program["period"]:
                 if get_safe(period, "enabled") == "off":
                     continue
                 period_hh, period_mm = get_safe(period, "time").split(":")
-                period_datetime = datetime.datetime(dt.year, dt.month, dt.day, int(period_hh), int(period_mm))
+                period_datetime = datetime.datetime(
+                    dt.year, dt.month, dt.day, int(period_hh), int(period_mm)
+                )
                 if period_datetime < dt:
                     self.activity_scheduled = get_safe(period, "activity")
                     self.activity_scheduled_start = period_datetime
@@ -306,7 +368,9 @@ class InfinitudeZone(ClimateDevice):
                     self.activity_next = get_safe(period, "activity")
                     self.activity_next_start = period_datetime
                     break
-            dt = datetime.datetime(year=dt.year, month=dt.month, day=dt.day) + datetime.timedelta(days=1)
+            dt = datetime.datetime(
+                year=dt.year, month=dt.month, day=dt.day
+            ) + datetime.timedelta(days=1)
 
         # Compute a custom 'hold_mode' based on the combination of hold values
         if self.hold_state == HOLD_ON:
@@ -372,7 +436,7 @@ class InfinitudeZone(ClimateDevice):
             "hold_until": self.hold_until,
             "outdoor_temperature": self.outdoor_temperature,
             "airflow_cfm": self.airflow_cfm,
-            "occupancy": self.occupancy
+            "occupancy": self.occupancy,
         }
         attributes = {}
         attributes.update(default_attributes)
@@ -402,15 +466,15 @@ class InfinitudeZone(ClimateDevice):
         """Return hvac operation ie. heat, cool mode.
         Need to be one of HVAC_MODE_*.
         """
-        if self._hvac_mode == 'heat':
+        if self._hvac_mode == "heat":
             return HVAC_MODE_HEAT
-        elif self._hvac_mode == 'cool':
+        elif self._hvac_mode == "cool":
             return HVAC_MODE_COOL
-        elif self._hvac_mode == 'auto':
+        elif self._hvac_mode == "auto":
             return HVAC_MODE_HEAT_COOL
-        elif self._hvac_mode == 'fanonly':
+        elif self._hvac_mode == "fanonly":
             return HVAC_MODE_FAN_ONLY
-        elif self._hvac_mode == 'off':
+        elif self._hvac_mode == "off":
             return HVAC_MODE_OFF
         else:
             return HVAC_MODE_OFF
@@ -420,7 +484,13 @@ class InfinitudeZone(ClimateDevice):
         """Return the list of available hvac operation modes.
         Need to be a subset of HVAC_MODES.
         """
-        return [HVAC_MODE_OFF, HVAC_MODE_HEAT, HVAC_MODE_COOL, HVAC_MODE_HEAT_COOL, HVAC_MODE_FAN_ONLY]
+        return [
+            HVAC_MODE_OFF,
+            HVAC_MODE_HEAT,
+            HVAC_MODE_COOL,
+            HVAC_MODE_HEAT_COOL,
+            HVAC_MODE_FAN_ONLY,
+        ]
 
     @property
     def hvac_action(self):
@@ -430,7 +500,7 @@ class InfinitudeZone(ClimateDevice):
         # TODO: Add logic for fan
         if self.hvac_mode == HVAC_MODE_OFF:
             return CURRENT_HVAC_OFF
-        elif self._hvac_action == 'idle':
+        elif self._hvac_action == "idle":
             return CURRENT_HVAC_IDLE
         elif "heat" in self._hvac_action:
             return CURRENT_HVAC_HEAT
@@ -555,9 +625,12 @@ class InfinitudeZone(ClimateDevice):
 
         # Update the 'manual' activity with the updated temperatures
         # Enable hold until the next schedule change
-        self.infinitude.api("/api/config/zones/zone/{}/activities/activity/{}/"
-                            .format(self.zone_index, ACTIVITY_MANUAL_INDEX),
-                            data)
+        self.infinitude.api(
+            "/api/config/zones/zone/{}/activities/activity/{}/".format(
+                self.zone_index, ACTIVITY_MANUAL_INDEX
+            ),
+            data,
+        )
         self.set_hold_mode(activity=ACTIVITY_MANUAL)
 
     def set_humidity(self, humidity):
@@ -573,9 +646,12 @@ class InfinitudeZone(ClimateDevice):
 
         # Update the 'manual' activity with the selected fan mode, preserving the current setbacks
         # Enable hold until the next schedule change
-        self.infinitude.api("/api/config/zones/zone/{}/activities/activity/{}/"
-                            .format(self.zone_index, ACTIVITY_MANUAL_INDEX),
-                            {"fan": fan_mode, "htsp": self.setpoint_heat, "clsp": self.setpoint_cool})
+        self.infinitude.api(
+            "/api/config/zones/zone/{}/activities/activity/{}/".format(
+                self.zone_index, ACTIVITY_MANUAL_INDEX
+            ),
+            {"fan": fan_mode, "htsp": self.setpoint_heat, "clsp": self.setpoint_cool},
+        )
         self.set_hold_mode(activity=ACTIVITY_MANUAL)
 
     def set_hvac_mode(self, hvac_mode):
@@ -623,11 +699,15 @@ class InfinitudeZone(ClimateDevice):
 
         # Temporary manual override: Switch to manual activity and hold until next schedule change
         elif preset_mode == PRESET_MANUAL_TEMP:
-            self.set_hold_mode(mode=HOLD_MODE_UNTIL, until=None, activity=ACTIVITY_MANUAL)
+            self.set_hold_mode(
+                mode=HOLD_MODE_UNTIL, until=None, activity=ACTIVITY_MANUAL
+            )
 
         # Permanent manual override: Switch to manual activity and hold indefinitely
         elif preset_mode == PRESET_MANUAL_PERM:
-            self.set_hold_mode(mode=HOLD_MODE_INDEFINITE, until=None, activity=ACTIVITY_MANUAL)
+            self.set_hold_mode(
+                mode=HOLD_MODE_INDEFINITE, until=None, activity=ACTIVITY_MANUAL
+            )
 
         else:
             _LOGGER.error("Invalid preset mode: {}".format(preset_mode))
@@ -644,7 +724,7 @@ class InfinitudeZone(ClimateDevice):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        baseline_features = (SUPPORT_FAN_MODE | SUPPORT_PRESET_MODE)
+        baseline_features = SUPPORT_FAN_MODE | SUPPORT_PRESET_MODE
         if self.hvac_mode == HVAC_MODE_HEAT_COOL:
             return baseline_features | SUPPORT_TARGET_TEMPERATURE_RANGE
         elif self.hvac_mode in [HVAC_MODE_HEAT, HVAC_MODE_COOL]:
