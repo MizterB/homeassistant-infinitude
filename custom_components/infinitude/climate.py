@@ -2,7 +2,7 @@
 Platform for exposing a Carrier Infinity Touch climate device through the
 Infinitude proxy application
 """
-from homeassistant.components.climate import ClimateDevice, PLATFORM_SCHEMA
+from homeassistant.components.climate import ClimateEntity, PLATFORM_SCHEMA
 from homeassistant.components.climate.const import (
     HVAC_MODE_OFF,
     HVAC_MODE_HEAT,
