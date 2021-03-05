@@ -4,6 +4,6 @@
   "documentation": "https://github.com/MizterB/homeassistant-infinitude",
   "dependencies": [],
   "codeowners": ["@MizterB"],
-  "requirements": []
+  "requirements": [],
     "version": "v0.7.1"
 }
