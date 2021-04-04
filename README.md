@@ -51,6 +51,10 @@ Custom zone names are optional, and are applied in ascending order (zones 1-8). 
 
 
 ## Changelog
+*0.7.2*
+- Updated installation instructions for HACS
+- Include version number in manifest
+  
 *0.7.1*
 - Extend ClimateEntity, rather than ClimateDevice
   
