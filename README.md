@@ -13,18 +13,26 @@ Home Assistant custom component for controlling Carrier Infinity Touch thermosta
 
 4. Follow the configuration instructions.
 
-## Install with custom_updater
-_These instructions still need to be validated_
+## Install with HACS
+This custom component can be integrated into [HACS](https://github.com/hacs/integration), so you can track future updates.  If you have do not have have HACS installed, please see [their installation guide](https://hacs.xyz/docs/installation/manual).
 
-This custom component can be integrated into [custom_updater](https://github.com/custom-components/custom_updater), so you can track future updates.  
+1. Select HACS from the left-hand navigation menu.
 
-As this is not included in the default custom component list, add the following to your `configuration.yaml`:
+2. Click _Integrations_.
 
-```yaml
-custom_updater:
-  component_urls:
-    - https://raw.githubusercontent.com/MizterB/homeassistant-infinitude/master/custom_components.json
-```
+3. Click the three dots in the upper right-hand corner and select _Custom Repositories_.
+
+4. Paste "https://github.com/MizterB/homeassistant-infinitude" into the _Add custom repository URL_ text field.
+
+5. Select "Integration" from the Category dropdown and click Add.
+
+6. Close the Custom repositories dialog after it updates with the new integration.
+
+7. "Carrier Infinity via Inifinitude Proxy" will appear in your list of repositories.  Click the "Install" link inside it.
+
+8. Click "Install" in the resulting dialog box.
+
+9. Follow the configuration instructions.
 
 # Configuration
 Add the following to your `configuration.yaml`:
