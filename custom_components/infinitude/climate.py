@@ -291,7 +291,7 @@ class InfinitudeZone(ClimateEntity):
         self.humid = get_safe(self.system_status, "humid")
         self.filtrlvl = get_safe(self.system_status, "filtrlvl")
         self.humlvl = get_safe(self.system_status, "humlvl")
-        self.ventlvl = get_safe(self.system_status, "ventlvl") 
+        self.ventlvl = get_safe(self.system_status, "ventlvl")
         self.uvlvl = get_safe(self.system_status, "uvlvl") 
 
         # Occupancy is not always present
@@ -300,7 +300,7 @@ class InfinitudeZone(ClimateEntity):
         # Only get CFM if IDU is present
         idu = get_safe(self.system_status, "idu")
         self.airflow_cfm = None
-        if idu is not None: 
+        if idu is not None:
             self.airflow_cfm = float(get_safe(idu, "cfm"))
 
         # Only get modulating percentage if IDU type is furnacemodulating
