@@ -203,6 +203,12 @@ class InfinitudeZone(ClimateEntity):
         self.activity_next_start = None
         self.occupancy = None  # occupied, unoccupied, motion
         self.airflow_cfm = None
+        self.humid = None
+        self.filtrlvl = None
+        self.humlvl = None
+        self.ventlvl = None
+        self.uvlvl = None
+        self.idu_modulation = None
         self.outdoor_temperature = None
 
         self._preset_mode = None
@@ -282,6 +288,11 @@ class InfinitudeZone(ClimateEntity):
         self.hold_state = get_safe(self.zone_config, "hold")
         self.hold_activity = get_safe(self.zone_config, "holdActivity")
         self.hold_until = get_safe(self.zone_config, "otmr")
+        self.humid = get_safe(self.system_status, "humid")
+        self.filtrlvl = get_safe(self.system_status, "filtrlvl")
+        self.humlvl = get_safe(self.system_status, "humlvl")
+        self.ventlvl = get_safe(self.system_status, "ventlvl")
+        self.uvlvl = get_safe(self.system_status, "uvlvl") 
 
         # Occupancy is not always present
         self.occupancy = get_safe(self.zone_status, "occupancy")
@@ -291,6 +302,15 @@ class InfinitudeZone(ClimateEntity):
         self.airflow_cfm = None
         if idu is not None:
             self.airflow_cfm = float(get_safe(idu, "cfm"))
+
+        # Only get modulating percentage if IDU type is furnacemodulating
+        idu_modulation = None
+        if idu is not None and get_safe(idu, "type") == "furnacemodulating":
+            idu_opstat = get_safe(idu, "opstat");
+            if idu_opstat.isnumeric():
+                self.idu_modulation = int(idu_opstat)
+            else:
+                self.idu_modulation = 0
 
         # Safely handle missing outdoor temperature
         oat = get_safe(self.system_status, "oat")
@@ -435,6 +455,12 @@ class InfinitudeZone(ClimateEntity):
             "hold_activity": self.hold_activity,
             "hold_until": self.hold_until,
             "outdoor_temperature": self.outdoor_temperature,
+            "humid": self.humid,
+            "filtrlvl": self.filtrlvl,
+            "humlvl": self.humlvl,
+            "ventlvl": self.ventlvl,
+            "uvlvl": self.uvlvl,
+            "idu_modulation": self.idu_modulation,
             "airflow_cfm": self.airflow_cfm,
             "occupancy": self.occupancy,
         }
