@@ -170,6 +170,10 @@ class Infinitude:
         config = self.api("/api/config")
         return config["data"]
 
+    def energy(self):
+        energy = self.api("/energy.json")
+        return energy
+
 
 class InfinitudeZone(ClimateEntity):
     def __init__(self, infinitude, zone_id, zone_name_custom=None):
@@ -210,6 +214,8 @@ class InfinitudeZone(ClimateEntity):
         self.uvlvl = None
         self.idu_modulation = None
         self.outdoor_temperature = None
+
+        self.energy = None
 
         self._preset_mode = None
 
@@ -254,6 +260,7 @@ class InfinitudeZone(ClimateEntity):
         try:
             self.system_status = self.infinitude.status()
             self.system_config = self.infinitude.config()
+            self.energy_stats = self.infinitude.energy()
         except URLError as e:
             _LOGGER.error(
                 "Unable to retrieve data from Infinitude: {}".format(e.reason)
@@ -296,6 +303,23 @@ class InfinitudeZone(ClimateEntity):
 
         # Occupancy is not always present
         self.occupancy = get_safe(self.zone_status, "occupancy")
+        
+        # energy.json is not always filled
+        if len(self.energy_stats) > 0:
+            energy_periods = self.energy_stats["energy"][0]["usage"][0]["period"]
+            energy_periods_dict = {}
+            for period in energy_periods:
+                period_id = period["id"]
+                period.pop("id")
+                period_unpacked = {}
+                for attrib in period:
+                    period_unpacked[attrib] = int(period[attrib][0])
+                energy_periods_dict[period_id] = period_unpacked
+
+            self.energy = energy_periods_dict
+            _LOGGER.debug("%s energy stats present", len(energy_periods))
+        else: 
+            _LOGGER.debug("no energy stats %s", self.energy_stats)
 
         # Only get CFM if IDU is present
         idu = get_safe(self.system_status, "idu")
@@ -463,6 +487,7 @@ class InfinitudeZone(ClimateEntity):
             "idu_modulation": self.idu_modulation,
             "airflow_cfm": self.airflow_cfm,
             "occupancy": self.occupancy,
+            "energy": self.energy,
         }
         attributes = {}
         attributes.update(default_attributes)
