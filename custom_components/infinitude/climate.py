@@ -213,6 +213,7 @@ class InfinitudeZone(ClimateEntity):
         self.ventlvl = None
         self.uvlvl = None
         self.idu_modulation = None
+        self.odu_modulation = None
         self.outdoor_temperature = None
 
         self.energy = None
@@ -335,6 +336,16 @@ class InfinitudeZone(ClimateEntity):
                 self.idu_modulation = int(idu_opstat)
             else:
                 self.idu_modulation = 0
+
+        odu = get_safe(self.system_status, "odu")
+        odu_modulation = None
+
+        if odu is not None and get_safe(odu, "type") == "gs3ngipac":
+            odu_opstat = get_safe(odu, "opstat");
+            if odu_opstat.isnumeric():
+                self.odu_modulation = int(odu_opstat)
+            else:
+                self.odu_modulation = 0
 
         # Safely handle missing outdoor temperature
         oat = get_safe(self.system_status, "oat")
@@ -485,6 +496,7 @@ class InfinitudeZone(ClimateEntity):
             "ventlvl": self.ventlvl,
             "uvlvl": self.uvlvl,
             "idu_modulation": self.idu_modulation,
+            "odu_modulation": self.odu_modulation,
             "airflow_cfm": self.airflow_cfm,
             "occupancy": self.occupancy,
             "energy": self.energy,
