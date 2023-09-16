@@ -25,6 +25,7 @@ from homeassistant.components.climate.const import (
     SUPPORT_PRESET_MODE,
 )
 from homeassistant.const import (
+    CONF_SSL,
     CONF_HOST,
     CONF_PORT,
     ATTR_TEMPERATURE,
@@ -91,6 +92,7 @@ PRESET_MODES = [
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
     {
         vol.Required(CONF_HOST): cv.string,
+        vol.Optional(CONF_SSL, default=False): cv.boolean,
         vol.Optional(CONF_PORT, default=3000): cv.port,
         vol.Optional("zone_names", default=[]): list,
     }
@@ -101,8 +103,9 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
     """Set up the connection"""
     host = config.get(CONF_HOST)
     port = config.get(CONF_PORT)
+    ssl = config.get(CONF_SSL)
 
-    infinitude = Infinitude(host, port)
+    infinitude = Infinitude(host, port, ssl)
     status = infinitude.status()
 
     devices = []
@@ -145,12 +148,14 @@ def setup_platform(hass, config, add_devices, discovery_info=None):
 
 
 class Infinitude:
-    def __init__(self, host, port):
+    def __init__(self, host, port, ssl):
         self.host = host
         self.port = port
+        self.ssl = ssl
 
     def api(self, path, req_data=None):
-        url = "http://{}:{}{}".format(self.host, self.port, path)
+        proto = 'https' if self.ssl else 'http'
+        url = "{}://{}:{}{}".format(proto, self.host, self.port, path)
 
         # If data is provided, encode for POSTing
         if req_data is not None:
@@ -299,11 +304,11 @@ class InfinitudeZone(ClimateEntity):
         self.filtrlvl = get_safe(self.system_status, "filtrlvl")
         self.humlvl = get_safe(self.system_status, "humlvl")
         self.ventlvl = get_safe(self.system_status, "ventlvl")
-        self.uvlvl = get_safe(self.system_status, "uvlvl") 
+        self.uvlvl = get_safe(self.system_status, "uvlvl")
 
         # Occupancy is not always present
         self.occupancy = get_safe(self.zone_status, "occupancy")
-        
+
         # energy.json is not always filled
         if len(self.energy_stats) > 0:
             energy_periods = self.energy_stats["energy"][0]["usage"][0]["period"]
@@ -318,7 +323,7 @@ class InfinitudeZone(ClimateEntity):
 
             self.energy = energy_periods_dict
             _LOGGER.debug("%s energy stats present", len(energy_periods))
-        else: 
+        else:
             _LOGGER.debug("no energy stats %s", self.energy_stats)
 
         # Only get CFM if IDU is present
