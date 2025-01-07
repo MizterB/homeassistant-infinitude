@@ -1,5 +1,5 @@
-# Notice
-*Please check out the new version of this project, available at [homeassistant-infinitude-beyond](https://github.com/MizterB/homeassistant-infinitude-beyond), which takes advantage of modern Home Assistant capabilitities.  It can be installed alongside this project, so you can try it out before changing over.  After some time, this legacy version will be shut down.  Thanks for stopping by!*
+# As of January 1, 2025, this project is no longer supported
+*Please check out the new version of this project, available at [homeassistant-infinitude-beyond](https://github.com/MizterB/homeassistant-infinitude-beyond), which takes advantage of modern Home Assistant capabilitities. Thanks for stopping by!*
 
 # homeassistant-infinitude
 Home Assistant custom component for controlling Carrier Infinity Touch thermostats through an [Infinitude](https://github.com/nebulous/infinitude) proxy server.
